@@ -1,45 +1,45 @@
 #![no_std]
-
-use soroban_sdk::{contract, contractimpl, Env, Symbol, symbol_short, Map, String};
+use soroban_sdk::{contract, contractimpl, Env, Symbol, symbol_short, Address, Map};
 
 #[contract]
-pub struct DecentralizedDNS;
+pub struct SportsBetting;
 
 #[contractimpl]
-impl DecentralizedDNS {
+impl SportsBetting {
 
-    // Register a domain -> address mapping
-    pub fn register(env: Env, domain: String, address: String) {
-        let mut storage: Map<String, String> = env.storage().instance().get(&symbol_short!("DNS")).unwrap_or(Map::new(&env));
+    // Place a bet
+    pub fn place_bet(env: Env, user: Address, match_id: Symbol, amount: i128) {
+        user.require_auth();
 
-        // Prevent overwriting existing domain
-        if storage.contains_key(domain.clone()) {
-            panic!("Domain already registered");
-        }
+        let key = (user.clone(), match_id.clone());
+        let mut bets: Map<(Address, Symbol), i128> =
+            env.storage().instance().get(&symbol_short!("BETS")).unwrap_or(Map::new(&env));
 
-        storage.set(domain, address);
-        env.storage().instance().set(&symbol_short!("DNS"), &storage);
+        bets.set(key, amount);
+
+        env.storage().instance().set(&symbol_short!("BETS"), &bets);
     }
 
-    // Resolve domain -> address
-    pub fn resolve(env: Env, domain: String) -> String {
-        let storage: Map<String, String> = env.storage().instance().get(&symbol_short!("DNS")).unwrap_or(Map::new(&env));
+    // Get bet amount
+    pub fn get_bet(env: Env, user: Address, match_id: Symbol) -> i128 {
+        let bets: Map<(Address, Symbol), i128> =
+            env.storage().instance().get(&symbol_short!("BETS")).unwrap_or(Map::new(&env));
 
-        match storage.get(domain) {
-            Some(addr) => addr,
-            None => panic!("Domain not found"),
-        }
+        bets.get((user, match_id)).unwrap_or(0)
     }
 
-    // Update domain mapping
-    pub fn update(env: Env, domain: String, new_address: String) {
-        let mut storage: Map<String, String> = env.storage().instance().get(&symbol_short!("DNS")).unwrap_or(Map::new(&env));
+    // Resolve match and distribute winnings (simplified)
+    pub fn resolve_match(env: Env, match_id: Symbol, winner: Address) {
+        let bets: Map<(Address, Symbol), i128> =
+            env.storage().instance().get(&symbol_short!("BETS")).unwrap_or(Map::new(&env));
 
-        if !storage.contains_key(domain.clone()) {
-            panic!("Domain not registered");
-        }
+        // In real contract: logic for payout distribution
+        // Here we just store winner for reference
+        env.storage().instance().set(&match_id, &winner);
+    }
 
-        storage.set(domain, new_address);
-        env.storage().instance().set(&symbol_short!("DNS"), &storage);
+    // Get winner of a match
+    pub fn get_winner(env: Env, match_id: Symbol) -> Address {
+        env.storage().instance().get(&match_id).unwrap()
     }
 }
