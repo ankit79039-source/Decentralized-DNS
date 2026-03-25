@@ -2,9 +2,9 @@
 
 import { useState, useCallback } from "react";
 import {
-  addProduct,
-  updateProductStatus,
-  getProduct,
+  registerDomain,
+  resolveDomain,
+  updateDomain,
   CONTRACT_ADDRESS,
 } from "@/hooks/contract";
 import { AnimatedCard } from "@/components/ui/animated-card";
@@ -118,17 +118,9 @@ function MethodSignature({
   );
 }
 
-// ── Status Config ────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; dot: string; variant: "success" | "warning" | "info" }> = {
-  Created: { color: "text-[#fbbf24]", bg: "bg-[#fbbf24]/10", border: "border-[#fbbf24]/20", dot: "bg-[#fbbf24]", variant: "warning" },
-  Shipped: { color: "text-[#4fc3f7]", bg: "bg-[#4fc3f7]/10", border: "border-[#4fc3f7]/20", dot: "bg-[#4fc3f7]", variant: "info" },
-  Delivered: { color: "text-[#34d399]", bg: "bg-[#34d399]/10", border: "border-[#34d399]/20", dot: "bg-[#34d399]", variant: "success" },
-};
-
 // ── Main Component ───────────────────────────────────────────
 
-type Tab = "track" | "add" | "update";
+type Tab = "resolve" | "register" | "update";
 
 interface ContractUIProps {
   walletAddress: string | null;
@@ -137,55 +129,55 @@ interface ContractUIProps {
 }
 
 export default function ContractUI({ walletAddress, onConnect, isConnecting }: ContractUIProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("track");
+  const [activeTab, setActiveTab] = useState<Tab>("resolve");
   const [error, setError] = useState<string | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
 
-  const [addId, setAddId] = useState("");
-  const [addOrigin, setAddOrigin] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
+  const [registerDomainVal, setRegisterDomainVal] = useState("");
+  const [registerIp, setRegisterIp] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
 
-  const [updateId, setUpdateId] = useState("");
-  const [updateStatusVal, setUpdateStatusVal] = useState("");
+  const [updateDomainVal, setUpdateDomainVal] = useState("");
+  const [updateIp, setUpdateIp] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const [trackId, setTrackId] = useState("");
-  const [isTracking, setIsTracking] = useState(false);
-  const [productData, setProductData] = useState<Record<string, string> | null>(null);
+  const [resolveDomainVal, setResolveDomainVal] = useState("");
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolvedIp, setResolvedIp] = useState<string | null>(null);
 
   const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  const handleAddProduct = useCallback(async () => {
+  const handleRegisterDomain = useCallback(async () => {
     if (!walletAddress) return setError("Connect wallet first");
-    if (!addId.trim() || !addOrigin.trim()) return setError("Fill in all fields");
+    if (!registerDomainVal.trim() || !registerIp.trim()) return setError("Fill in all fields");
     setError(null);
-    setIsAdding(true);
+    setIsRegistering(true);
     setTxStatus("Awaiting signature...");
     try {
-      await addProduct(walletAddress, addId.trim(), addOrigin.trim());
-      setTxStatus("Product registered on-chain!");
-      setAddId("");
-      setAddOrigin("");
+      await registerDomain(walletAddress, registerDomainVal.trim(), registerIp.trim());
+      setTxStatus("Domain registered on-chain!");
+      setRegisterDomainVal("");
+      setRegisterIp("");
       setTimeout(() => setTxStatus(null), 5000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Transaction failed");
       setTxStatus(null);
     } finally {
-      setIsAdding(false);
+      setIsRegistering(false);
     }
-  }, [walletAddress, addId, addOrigin]);
+  }, [walletAddress, registerDomainVal, registerIp]);
 
-  const handleUpdateStatus = useCallback(async () => {
+  const handleUpdateDomain = useCallback(async () => {
     if (!walletAddress) return setError("Connect wallet first");
-    if (!updateId.trim() || !updateStatusVal.trim()) return setError("Fill in all fields");
+    if (!updateDomainVal.trim() || !updateIp.trim()) return setError("Fill in all fields");
     setError(null);
     setIsUpdating(true);
     setTxStatus("Awaiting signature...");
     try {
-      await updateProductStatus(walletAddress, updateId.trim(), updateStatusVal.trim());
-      setTxStatus("Status updated on-chain!");
-      setUpdateId("");
-      setUpdateStatusVal("");
+      await updateDomain(walletAddress, updateDomainVal.trim(), updateIp.trim());
+      setTxStatus("Domain updated on-chain!");
+      setUpdateDomainVal("");
+      setUpdateIp("");
       setTimeout(() => setTxStatus(null), 5000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Transaction failed");
@@ -193,34 +185,30 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
     } finally {
       setIsUpdating(false);
     }
-  }, [walletAddress, updateId, updateStatusVal]);
+  }, [walletAddress, updateDomainVal, updateIp]);
 
-  const handleTrackProduct = useCallback(async () => {
-    if (!trackId.trim()) return setError("Enter a product ID");
+  const handleResolveDomain = useCallback(async () => {
+    if (!resolveDomainVal.trim()) return setError("Enter a domain name");
     setError(null);
-    setIsTracking(true);
-    setProductData(null);
+    setIsResolving(true);
+    setResolvedIp(null);
     try {
-      const result = await getProduct(trackId.trim(), walletAddress || undefined);
-      if (result && typeof result === "object") {
-        const mapped: Record<string, string> = {};
-        for (const [k, v] of Object.entries(result)) {
-          mapped[String(k)] = String(v);
-        }
-        setProductData(mapped);
+      const result = await resolveDomain(resolveDomainVal.trim(), walletAddress || undefined);
+      if (result) {
+        setResolvedIp(String(result));
       } else {
-        setError("Product not found");
+        setError("Domain not found");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Query failed");
     } finally {
-      setIsTracking(false);
+      setIsResolving(false);
     }
-  }, [trackId, walletAddress]);
+  }, [resolveDomainVal, walletAddress]);
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode; color: string }[] = [
-    { key: "track", label: "Track", icon: <SearchIcon />, color: "#4fc3f7" },
-    { key: "add", label: "Register", icon: <PackageIcon />, color: "#7c6cf0" },
+    { key: "resolve", label: "Resolve", icon: <SearchIcon />, color: "#4fc3f7" },
+    { key: "register", label: "Register", icon: <PackageIcon />, color: "#7c6cf0" },
     { key: "update", label: "Update", icon: <RefreshIcon />, color: "#fbbf24" },
   ];
 
@@ -263,7 +251,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-white/90">Supply Chain Tracker</h3>
+                <h3 className="text-sm font-semibold text-white/90">Decentralized DNS</h3>
                 <p className="text-[10px] text-white/25 font-mono mt-0.5">{truncate(CONTRACT_ADDRESS)}</p>
               </div>
             </div>
@@ -275,7 +263,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
             {tabs.map((t) => (
               <button
                 key={t.key}
-                onClick={() => { setActiveTab(t.key); setError(null); setProductData(null); }}
+                onClick={() => { setActiveTab(t.key); setError(null); setResolvedIp(null); }}
                 className={cn(
                   "relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-all",
                   activeTab === t.key ? "text-white/90" : "text-white/35 hover:text-white/55"
@@ -295,58 +283,39 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
 
           {/* Tab Content */}
           <div className="p-6">
-            {/* Track */}
-            {activeTab === "track" && (
+            {/* Resolve */}
+            {activeTab === "resolve" && (
               <div className="space-y-5">
-                <MethodSignature name="get_product" params="(product_id: String)" returns="-> Map<Symbol, String>" color="#4fc3f7" />
-                <Input label="Product ID" value={trackId} onChange={(e) => setTrackId(e.target.value)} placeholder="e.g. PROD-001" />
-                <ShimmerButton onClick={handleTrackProduct} disabled={isTracking} shimmerColor="#4fc3f7" className="w-full">
-                  {isTracking ? <><SpinnerIcon /> Querying...</> : <><SearchIcon /> Track Product</>}
+                <MethodSignature name="resolve" params="(domain: Symbol)" returns="-> Symbol" color="#4fc3f7" />
+                <Input label="Domain Name" value={resolveDomainVal} onChange={(e) => setResolveDomainVal(e.target.value)} placeholder="e.g. mysite" />
+                <ShimmerButton onClick={handleResolveDomain} disabled={isResolving} shimmerColor="#4fc3f7" className="w-full">
+                  {isResolving ? <><SpinnerIcon /> Resolving...</> : <><SearchIcon /> Resolve Domain</>}
                 </ShimmerButton>
 
-                {productData && (
-                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden animate-fade-in-up">
-                    <div className="border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/25">Product Details</span>
-                      {(() => {
-                        const status = productData.status || "Unknown";
-                        const cfg = STATUS_CONFIG[status];
-                        return cfg ? (
-                          <Badge variant={cfg.variant}>
-                            <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
-                            {status}
-                          </Badge>
-                        ) : (
-                          <Badge>{status}</Badge>
-                        );
-                      })()}
+                {resolvedIp && (
+                  <div className="rounded-xl border border-[#34d399]/20 bg-[#34d399]/[0.05] p-4 animate-fade-in-up">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/25">Resolved IP</span>
+                      <Badge variant="success">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#34d399] mr-1.5" />
+                        Found
+                      </Badge>
                     </div>
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/35">Product ID</span>
-                        <span className="font-mono text-sm text-white/80">{trackId}</span>
-                      </div>
-                      {Object.entries(productData).map(([key, val]) => (
-                        <div key={key} className="flex items-center justify-between">
-                          <span className="text-xs text-white/35 capitalize">{key}</span>
-                          <span className="font-mono text-sm text-white/80">{val}</span>
-                        </div>
-                      ))}
-                    </div>
+                    <div className="font-mono text-lg text-[#34d399]/90 break-all">{resolvedIp}</div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Add */}
-            {activeTab === "add" && (
+            {/* Register */}
+            {activeTab === "register" && (
               <div className="space-y-5">
-                <MethodSignature name="add_product" params="(product_id: String, origin: String)" color="#7c6cf0" />
-                <Input label="Product ID" value={addId} onChange={(e) => setAddId(e.target.value)} placeholder="e.g. PROD-001" />
-                <Input label="Origin" value={addOrigin} onChange={(e) => setAddOrigin(e.target.value)} placeholder="e.g. Factory A, Shanghai" />
+                <MethodSignature name="register" params="(domain: Symbol, owner: Address, ip: Symbol)" color="#7c6cf0" />
+                <Input label="Domain Name" value={registerDomainVal} onChange={(e) => setRegisterDomainVal(e.target.value)} placeholder="e.g. mysite" />
+                <Input label="IP Address" value={registerIp} onChange={(e) => setRegisterIp(e.target.value)} placeholder="e.g. 192.168.1.1" />
                 {walletAddress ? (
-                  <ShimmerButton onClick={handleAddProduct} disabled={isAdding} shimmerColor="#7c6cf0" className="w-full">
-                    {isAdding ? <><SpinnerIcon /> Registering...</> : <><PackageIcon /> Register Product</>}
+                  <ShimmerButton onClick={handleRegisterDomain} disabled={isRegistering} shimmerColor="#7c6cf0" className="w-full">
+                    {isRegistering ? <><SpinnerIcon /> Registering...</> : <><PackageIcon /> Register Domain</>}
                   </ShimmerButton>
                 ) : (
                   <button
@@ -354,7 +323,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                     disabled={isConnecting}
                     className="w-full rounded-xl border border-dashed border-[#7c6cf0]/20 bg-[#7c6cf0]/[0.03] py-4 text-sm text-[#7c6cf0]/60 hover:border-[#7c6cf0]/30 hover:text-[#7c6cf0]/80 active:scale-[0.99] transition-all disabled:opacity-50"
                   >
-                    Connect wallet to register products
+                    Connect wallet to register domains
                   </button>
                 )}
               </div>
@@ -363,53 +332,21 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
             {/* Update */}
             {activeTab === "update" && (
               <div className="space-y-5">
-                <MethodSignature name="update_status" params="(product_id: String, new_status: String)" color="#fbbf24" />
-                <Input label="Product ID" value={updateId} onChange={(e) => setUpdateId(e.target.value)} placeholder="e.g. PROD-001" />
-
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-medium uppercase tracking-wider text-white/30">New Status</label>
-                  <div className="flex gap-2">
-                    {(["Shipped", "Delivered"] as const).map((s) => {
-                      const cfg = STATUS_CONFIG[s];
-                      const active = updateStatusVal === s;
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => setUpdateStatusVal(s)}
-                          className={cn(
-                            "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all active:scale-95",
-                            active
-                              ? `${cfg.border} ${cfg.bg} ${cfg.color}`
-                              : "border-white/[0.06] bg-white/[0.02] text-white/35 hover:text-white/55 hover:border-white/[0.1]"
-                          )}
-                        >
-                          <span className={cn("h-1.5 w-1.5 rounded-full transition-colors", active ? cfg.dot : "bg-white/20")} />
-                          {s}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-px transition-all focus-within:border-[#fbbf24]/30 focus-within:shadow-[0_0_20px_rgba(251,191,36,0.08)]">
-                    <input
-                      value={updateStatusVal}
-                      onChange={(e) => setUpdateStatusVal(e.target.value)}
-                      placeholder="Or type a custom status..."
-                      className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/15 outline-none"
-                    />
-                  </div>
-                </div>
+                <MethodSignature name="update" params="(domain: Symbol, owner: Address, new_ip: Symbol)" color="#fbbf24" />
+                <Input label="Domain Name" value={updateDomainVal} onChange={(e) => setUpdateDomainVal(e.target.value)} placeholder="e.g. mysite" />
+                <Input label="New IP Address" value={updateIp} onChange={(e) => setUpdateIp(e.target.value)} placeholder="e.g. 10.0.0.1" />
 
                 {walletAddress ? (
-                  <ShimmerButton onClick={handleUpdateStatus} disabled={isUpdating} shimmerColor="#fbbf24" className="w-full">
-                    {isUpdating ? <><SpinnerIcon /> Updating...</> : <><RefreshIcon /> Update Status</>}
+                  <ShimmerButton onClick={handleUpdateDomain} disabled={isUpdating} shimmerColor="#fbbf24" className="w-full">
+                    {isUpdating ? <><SpinnerIcon /> Updating...</> : <><RefreshIcon /> Update Domain IP</>}
                   </ShimmerButton>
                 ) : (
                   <button
                     onClick={onConnect}
                     disabled={isConnecting}
-                    className="w-full rounded-xl border border-dashed border-[#fbbf24]/20 bg-[#fbbf24]/[0.03] py-4 text-sm text-[#fbbf24]/60 hover:border-[#fbbf24]/30 hover:text-[#fbbf24]/80 active:scale-[0.99] transition-all disabled:opacity-50"
+                    className="w-full rounded-xl border border-dashed border-[#fbbf24]/20 bg-[#fbbf24]/[0.03] py-4 text-sm text-[#fbbf24]/60 hover:border-[#fbbf24]/30 hover:text-[#fbbfyellow]/80 active:scale-[0.99] transition-all disabled:opacity-50"
                   >
-                    Connect wallet to update status
+                    Connect wallet to update domains
                   </button>
                 )}
               </div>
@@ -418,15 +355,22 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
 
           {/* Footer */}
           <div className="border-t border-white/[0.04] px-6 py-3 flex items-center justify-between">
-            <p className="text-[10px] text-white/15">Supply Chain Tracker &middot; Soroban</p>
+            <p className="text-[10px] text-white/15">Decentralized DNS &middot; Soroban</p>
             <div className="flex items-center gap-2">
-              {["Created", "Shipped", "Delivered"].map((s, i) => (
-                <span key={s} className="flex items-center gap-1.5">
-                  <span className={cn("h-1 w-1 rounded-full", STATUS_CONFIG[s]?.dot ?? "bg-white/20")} />
-                  <span className="font-mono text-[9px] text-white/15">{s}</span>
-                  {i < 2 && <span className="text-white/10 text-[8px]">&rarr;</span>}
-                </span>
-              ))}
+              <span className="flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-[#4fc3f7]" />
+                <span className="font-mono text-[9px] text-white/15">Resolve</span>
+              </span>
+              <span className="text-white/10 text-[8px]">&rarr;</span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-[#7c6cf0]" />
+                <span className="font-mono text-[9px] text-white/15">Register</span>
+              </span>
+              <span className="text-white/10 text-[8px]">&rarr;</span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-[#fbbf24]" />
+                <span className="font-mono text-[9px] text-white/15">Update</span>
+              </span>
             </div>
           </div>
         </AnimatedCard>

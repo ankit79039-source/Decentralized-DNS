@@ -26,7 +26,7 @@ import {
 
 /** Your deployed Soroban contract ID */
 export const CONTRACT_ADDRESS =
-  "CDJVMAX34YRCQ5JFC6SIOQOVSUY6XWEFYJOLF3SBCKU7CMI3IAP6HPWN";
+  "CDAZK5IX2OQ2R5SVK65XMITFBRW4BLOLUIFZUNL636SP5KDX6XKLZQAU";
 
 /** Network passphrase (testnet by default) */
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
@@ -211,57 +211,60 @@ export function toScValBool(value: boolean): xdr.ScVal {
   return nativeToScVal(value, { type: "bool" });
 }
 
+export function toScValSymbol(value: string): xdr.ScVal {
+  return nativeToScVal(value, { type: "symbol" });
+}
+
 // ============================================================
-// Supply Chain Tracker — Contract Methods
+// Decentralized DNS — Contract Methods
 // ============================================================
 
 /**
- * Add a product to the supply chain.
- * Calls: add_product(product_id: String, origin: String)
+ * Register a domain name.
+ * Calls: register(domain: Symbol, owner: Address, ip: Symbol)
  */
-export async function addProduct(
+export async function registerDomain(
   caller: string,
-  productId: string,
-  origin: string
+  domain: string,
+  ip: string
 ) {
   return callContract(
-    "add_product",
-    [toScValString(productId), toScValString(origin)],
+    "register",
+    [toScValSymbol(domain), toScValAddress(caller), toScValSymbol(ip)],
     caller,
     true
   );
 }
 
 /**
- * Update a product's status.
- * Calls: update_status(product_id: String, new_status: String)
+ * Resolve a domain to its IP address (read-only).
+ * Calls: resolve(domain: Symbol) -> Symbol
  */
-export async function updateProductStatus(
-  caller: string,
-  productId: string,
-  newStatus: string
-) {
-  return callContract(
-    "update_status",
-    [toScValString(productId), toScValString(newStatus)],
-    caller,
-    true
-  );
-}
-
-/**
- * Get product details (read-only).
- * Calls: get_product(product_id: String) -> Map<Symbol, String>
- * Returns: { origin: string, status: string } or null
- */
-export async function getProduct(
-  productId: string,
+export async function resolveDomain(
+  domain: string,
   caller?: string
 ) {
   return readContract(
-    "get_product",
-    [toScValString(productId)],
+    "resolve",
+    [toScValSymbol(domain)],
     caller
+  );
+}
+
+/**
+ * Update a domain's IP address.
+ * Calls: update(domain: Symbol, owner: Address, new_ip: Symbol)
+ */
+export async function updateDomain(
+  caller: string,
+  domain: string,
+  newIp: string
+) {
+  return callContract(
+    "update",
+    [toScValSymbol(domain), toScValAddress(caller), toScValSymbol(newIp)],
+    caller,
+    true
   );
 }
 
