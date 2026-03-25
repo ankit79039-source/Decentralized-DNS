@@ -67,9 +67,7 @@ Traditional DNS systems are centralized and controlled by authorities. This proj
 
 ## 🔗 Deployed Smart Contract Link
 
-https://stellar.expert/explorer/testnet/contract/CA7ZOSNY7P322TTYJSROASOXYOJETU4ERXRWSQWJE4KBFUCU6ND7OJV3
-
----
+https://stellar.expert/explorer/testnet/contract/CDAZK5IX2OQ2R5SVK65XMITFBRW4BLOLUIFZUNL636SP5KDX6XKLZQAU---
 
 ## 🧪 Future Improvements
 
