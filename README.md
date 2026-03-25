@@ -5,6 +5,8 @@
 This project implements a **Decentralized Domain Name System (DNS)** using **Soroban smart contracts on the Stellar blockchain**. It allows users to map human-readable domain names (like `ankit.stellar`) to blockchain addresses in a secure and censorship-resistant manner.
 
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/cd619949-fa08-4502-8513-0b2227aeca3a" />
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/70964f31-955d-4a9c-8b58-2010ca6520cd" />
+
 
 ---
 
